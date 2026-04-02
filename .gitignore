@@ -1,0 +1,11 @@
+.DS_Store
+.venv/
+__pycache__/
+*.pyc
+
+greenleaf_bot_project_v2/.env
+greenleaf_bot_project_v2/greenleaf.db
+greenleaf_bot_project_v2/.venv/
+greenleaf_bot_project_v2/app/.venv/
+greenleaf_bot_project_v2/**/__pycache__/
+greenleaf_bot_project_v2/**/*.pyc

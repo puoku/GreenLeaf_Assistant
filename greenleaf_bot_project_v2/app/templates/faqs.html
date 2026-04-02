@@ -1,0 +1,23 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="grid">
+  <div class="card">
+    <h2>Добавить FAQ</h2>
+    <form method="post" action="/admin/faqs/create">
+      <input name="intent" placeholder="Intent" required>
+      <textarea name="question_patterns" placeholder="Фразы через ;" required></textarea>
+      <textarea name="answer_text" placeholder="Ответ" required></textarea>
+      <button type="submit">Сохранить</button>
+    </form>
+  </div>
+  <div class="card">
+    <h2>FAQ</h2>
+    <table>
+      <tr><th>ID</th><th>Intent</th><th>Фразы</th><th>Ответ</th></tr>
+      {% for item in faqs %}
+      <tr><td>{{ item.id }}</td><td>{{ item.intent }}</td><td>{{ item.question_patterns }}</td><td>{{ item.answer_text }}</td></tr>
+      {% endfor %}
+    </table>
+  </div>
+</div>
+{% endblock %}

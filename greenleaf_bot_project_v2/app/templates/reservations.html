@@ -1,0 +1,12 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="card">
+  <h2>Брони</h2>
+  <table>
+    <tr><th>ID</th><th>Товары</th><th>Срок</th><th>Телефон</th><th>Статус</th><th>Дата</th></tr>
+    {% for item in reservations %}
+    <tr><td>{{ item.id }}</td><td>{{ item.items_text }}</td><td>{{ item.reserve_until or '—' }}</td><td>{{ item.customer_phone or '—' }}</td><td>{{ item.status }}</td><td>{{ item.created_at }}</td></tr>
+    {% endfor %}
+  </table>
+</div>
+{% endblock %}

@@ -1,0 +1,28 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="grid">
+  <div class="card">
+    <h2>Добавить товар</h2>
+    <form method="post" action="/admin/products/create">
+      <input name="name" placeholder="Название" required>
+      <input name="sku" placeholder="Артикул">
+      <input name="price_partner" type="number" step="0.01" placeholder="Партнёрская цена" required>
+      <input name="quantity" type="number" placeholder="Количество" required>
+      <input name="pv" type="number" step="0.1" placeholder="PV">
+      <input name="category" placeholder="Категория">
+      <input name="aliases" placeholder="Синонимы через запятую">
+      <textarea name="description" placeholder="Описание"></textarea>
+      <button type="submit">Сохранить</button>
+    </form>
+  </div>
+  <div class="card">
+    <h2>Товары</h2>
+    <table>
+      <tr><th>ID</th><th>Название</th><th>Цена</th><th>Остаток</th><th>Категория</th></tr>
+      {% for item in products %}
+      <tr><td>{{ item.id }}</td><td>{{ item.name }}</td><td>{{ item.price_partner }} ₽</td><td>{{ item.quantity }}</td><td>{{ item.category or '—' }}</td></tr>
+      {% endfor %}
+    </table>
+  </div>
+</div>
+{% endblock %}

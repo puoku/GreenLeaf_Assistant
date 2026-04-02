@@ -1,0 +1,12 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="card">
+  <h2>Заказы</h2>
+  <table>
+    <tr><th>ID</th><th>Товары</th><th>Получение</th><th>Адрес</th><th>Статус</th><th>Дата</th></tr>
+    {% for item in orders %}
+    <tr><td>{{ item.id }}</td><td>{{ item.items_text }}</td><td>{{ item.delivery_type or '—' }}</td><td>{{ item.address or '—' }}</td><td>{{ item.status }}</td><td>{{ item.created_at }}</td></tr>
+    {% endfor %}
+  </table>
+</div>
+{% endblock %}
