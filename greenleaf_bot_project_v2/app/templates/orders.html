@@ -2,10 +2,35 @@
 {% block content %}
 <div class="card">
   <h2>Заказы</h2>
+  <p class="small-note">Остаток товара уменьшается только после нажатия менеджером кнопки "Подтвердить". Кнопка "В работу" только помечает заявку как обрабатываемую и склад не меняет.</p>
   <table>
-    <tr><th>ID</th><th>Товары</th><th>Получение</th><th>Адрес</th><th>Статус</th><th>Дата</th></tr>
+    <tr><th>ID</th><th>Клиент</th><th>Товары</th><th>Получение</th><th>Адрес</th><th>Статус</th><th>Дата</th><th>Действия</th></tr>
     {% for item in orders %}
-    <tr><td>{{ item.id }}</td><td>{{ item.items_text }}</td><td>{{ item.delivery_type or '—' }}</td><td>{{ item.address or '—' }}</td><td>{{ item.status }}</td><td>{{ item.created_at }}</td></tr>
+    <tr>
+      <td>{{ item.id }}</td>
+      <td>{{ item.customer.full_name or item.customer.username or '—' }}<br><span class="muted">ID {{ item.customer.telegram_user_id }}</span></td>
+      <td>{{ item.items_text }}</td>
+      <td>{{ item.delivery_type or '—' }}</td>
+      <td>{{ item.address or '—' }}</td>
+      <td><span class="status-badge {{ status_class(item.status) }}">{{ display_status(item.status) }}</span></td>
+      <td>{{ item.created_at }}</td>
+      <td>
+        <div class="action-stack">
+          <form method="post" action="/admin/orders/{{ item.id }}/status">
+            <input type="hidden" name="status_value" value="{{ OrderStatus.confirmed.value }}">
+            <button type="submit" class="button-success">Подтвердить</button>
+          </form>
+          <form method="post" action="/admin/orders/{{ item.id }}/status">
+            <input type="hidden" name="status_value" value="{{ OrderStatus.in_progress.value }}">
+            <button type="submit" class="button-secondary">В работу</button>
+          </form>
+          <form method="post" action="/admin/orders/{{ item.id }}/status">
+            <input type="hidden" name="status_value" value="{{ OrderStatus.canceled.value }}">
+            <button type="submit" class="button-danger">Отклонить</button>
+          </form>
+        </div>
+      </td>
+    </tr>
     {% endfor %}
   </table>
 </div>

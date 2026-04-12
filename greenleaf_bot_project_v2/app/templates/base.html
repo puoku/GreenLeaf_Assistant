@@ -14,8 +14,29 @@
     th, td { padding:10px; border-bottom:1px solid #e5e7eb; text-align:left; vertical-align:top; }
     input, textarea { width:100%; padding:10px; margin:6px 0 12px; border:1px solid #d1d5db; border-radius:8px; }
     button { padding:10px 14px; border:0; border-radius:8px; background:#2563eb; color:white; cursor:pointer; }
-    .grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+    .grid { display:grid; grid-template-columns:0.75fr 1.25fr; gap:16px; }
+    @media (max-width: 1100px) { .grid { grid-template-columns:1fr; } }
     .muted { color:#6b7280; }
+    .stack-sm > * { margin-bottom:8px; }
+    .stack-sm > *:last-child { margin-bottom:0; }
+    .inline-form { display:flex; gap:8px; align-items:center; }
+    .inline-form input { margin:0; }
+    .danger { background:#dc2626; }
+    .note { font-size:14px; color:#6b7280; margin-top:-6px; margin-bottom:12px; }
+    .product-meta { font-size:14px; color:#374151; line-height:1.5; }
+    .product-name { font-weight:700; margin-bottom:4px; }
+    .badge { display:inline-block; padding:4px 8px; border-radius:999px; font-size:12px; background:#e5e7eb; color:#111827; }
+    .status-badge { display:inline-block; padding:4px 10px; border-radius:999px; font-size:12px; font-weight:700; letter-spacing:.02em; }
+    .status-ok { background:#dcfce7; color:#166534; }
+    .status-bad { background:#fee2e2; color:#991b1b; }
+    .status-neutral { background:#e5e7eb; color:#374151; }
+    .action-stack { display:flex; flex-direction:column; gap:8px; min-width:180px; }
+    .action-stack form { margin:0; }
+    .action-stack button { width:100%; }
+    .button-secondary { background:#475569; }
+    .button-success { background:#16a34a; }
+    .button-danger { background:#dc2626; }
+    .small-note { font-size:13px; color:#6b7280; }
   </style>
 </head>
 <body>

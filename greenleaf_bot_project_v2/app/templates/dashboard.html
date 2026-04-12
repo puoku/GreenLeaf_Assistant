@@ -9,7 +9,14 @@
   <div class="card">
     <h3>Последние заказы</h3>
     {% for item in orders %}
-      <p><b>#{{ item.id }}</b> — {{ item.items_text }}<br><span class="muted">{{ item.status }}</span></p>
+      <p>
+        <b>#{{ item.id }}</b> — {{ item.items_text }}<br>
+        <span class="muted">
+          Клиент: {{ item.customer.full_name or item.customer.username or '—' }}
+          {% if item.customer.telegram_user_id %}· ID {{ item.customer.telegram_user_id }}{% endif %}
+        </span><br>
+        <span class="status-badge {{ status_class(item.status) }}">{{ display_status(item.status) }}</span>
+      </p>
     {% else %}
       <p>Пока нет заказов.</p>
     {% endfor %}
@@ -17,7 +24,14 @@
   <div class="card">
     <h3>Последние брони</h3>
     {% for item in reservations %}
-      <p><b>#{{ item.id }}</b> — {{ item.items_text }}<br><span class="muted">{{ item.status }}</span></p>
+      <p>
+        <b>#{{ item.id }}</b> — {{ item.items_text }}<br>
+        <span class="muted">
+          Клиент: {{ item.customer_name or item.customer.full_name or item.customer.username or '—' }}
+          {% if item.customer.telegram_user_id %}· ID {{ item.customer.telegram_user_id }}{% endif %}
+        </span><br>
+        <span class="status-badge {{ status_class(item.status) }}">{{ display_status(item.status) }}</span>
+      </p>
     {% else %}
       <p>Пока нет броней.</p>
     {% endfor %}

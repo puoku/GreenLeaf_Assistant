@@ -2,10 +2,31 @@
 {% block content %}
 <div class="card">
   <h2>Брони</h2>
+  <p class="small-note">Бронь тоже не уменьшает остаток автоматически. Товар резервируется только после подтверждения менеджером.</p>
   <table>
-    <tr><th>ID</th><th>Товары</th><th>Срок</th><th>Телефон</th><th>Статус</th><th>Дата</th></tr>
+    <tr><th>ID</th><th>Клиент</th><th>Товары</th><th>Срок</th><th>Телефон</th><th>Статус</th><th>Дата</th><th>Действия</th></tr>
     {% for item in reservations %}
-    <tr><td>{{ item.id }}</td><td>{{ item.items_text }}</td><td>{{ item.reserve_until or '—' }}</td><td>{{ item.customer_phone or '—' }}</td><td>{{ item.status }}</td><td>{{ item.created_at }}</td></tr>
+    <tr>
+      <td>{{ item.id }}</td>
+      <td>{{ item.customer_name or item.customer.full_name or item.customer.username or '—' }}<br><span class="muted">ID {{ item.customer.telegram_user_id }}</span></td>
+      <td>{{ item.items_text }}</td>
+      <td>{{ item.reserve_until or '—' }}</td>
+      <td>{{ item.customer_phone or '—' }}</td>
+      <td><span class="status-badge {{ status_class(item.status) }}">{{ display_status(item.status) }}</span></td>
+      <td>{{ item.created_at }}</td>
+      <td>
+        <div class="action-stack">
+          <form method="post" action="/admin/reservations/{{ item.id }}/status">
+            <input type="hidden" name="status_value" value="{{ ReservationStatus.confirmed.value }}">
+            <button type="submit" class="button-success">Подтвердить</button>
+          </form>
+          <form method="post" action="/admin/reservations/{{ item.id }}/status">
+            <input type="hidden" name="status_value" value="{{ ReservationStatus.canceled.value }}">
+            <button type="submit" class="button-danger">Отклонить</button>
+          </form>
+        </div>
+      </td>
+    </tr>
     {% endfor %}
   </table>
 </div>

@@ -19,6 +19,7 @@ class Settings(BaseSettings):
     manager_chat_id: int = 0
     manager_topic_id: int | None = None
     manager_response_minutes: int = 15
+    human_handoff_minutes: int = 20
     timezone: str = 'Asia/Novosibirsk'
     partner_price_multiplier: float = 2.0
     secret_key: str = 'change-this-secret'

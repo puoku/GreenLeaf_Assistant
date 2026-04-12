@@ -17,3 +17,7 @@ class ReservationForm(StatesGroup):
 
 class AutoReservationForm(StatesGroup):
     waiting_confirmation = State()
+
+
+class ProductSelectionForm(StatesGroup):
+    waiting_choice = State()
