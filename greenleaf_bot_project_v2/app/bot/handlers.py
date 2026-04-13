@@ -19,7 +19,6 @@ from app.bot.states import AutoReservationForm, OrderForm, ProductSelectionForm,
 from app.config import get_settings
 from app.db.models import OrderStatus, ReservationStatus
 from app.services.faq import find_faq_answer, get_faq_by_intent
-from app.services.link_moderation import is_suspicious_link
 from app.services.llm import classify_message
 from app.services.orders import (
     analyze_reservation_text,
@@ -408,17 +407,6 @@ async def universal_text_handler(message: Message, state: FSMContext):
         return
 
     is_group_chat = message.chat.type in {ChatType.GROUP, ChatType.SUPERGROUP}
-
-    if is_group_chat:
-        member = await message.bot.get_chat_member(message.chat.id, message.from_user.id)
-        is_admin = member.status in {'administrator', 'creator'}
-        if not is_admin and is_suspicious_link(message.text or '', settings.bot_username):
-            try:
-                await message.delete()
-                await message.answer('Подозрительная ссылка удалена. Если это ошибка — напишите менеджеру.')
-            except Exception:
-                pass
-            return
 
     text = (message.text or '').strip()
     if not text:
