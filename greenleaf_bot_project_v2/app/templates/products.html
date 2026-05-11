@@ -9,6 +9,12 @@
     <p class="note">Загрузите CSV файл с товарами. Формат: название;артикул;цена;количество;pv;категория;синонимы;описание</p>
     <form method="post" action="/admin/products/import" enctype="multipart/form-data">
       <input type="file" name="csv_file" accept=".csv" required>
+      <label for="mode" class="product-meta">Режим импорта</label>
+      <select id="mode" name="mode" style="width:100%; padding:10px; margin:6px 0 12px; border:1px solid #d1d5db; border-radius:8px;">
+        <option value="upsert" selected>upsert (добавлять новые и обновлять существующие)</option>
+        <option value="insert-only">insert-only (добавлять только новые)</option>
+        <option value="preview">preview (сухой прогон без изменений)</option>
+      </select>
       <button type="submit">Загрузить CSV</button>
     </form>
     <hr style="margin: 20px 0; border-color: var(--border);">

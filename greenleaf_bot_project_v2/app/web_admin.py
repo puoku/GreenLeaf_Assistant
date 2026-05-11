@@ -1,8 +1,6 @@
 from __future__ import annotations
 
-import csv
-import io
-import re
+from urllib.parse import quote_plus
 
 from aiogram import Bot
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile, status
@@ -15,7 +13,9 @@ from sqlalchemy.orm import selectinload
 from app.config import get_settings
 from app.db.models import FAQItem, Order, OrderStatus, Product, Reservation, ReservationStatus, StockStatus
 from app.db.session import SessionLocal
+from app.services.import_products import clean_product_name, extract_pv, run_product_import
 from app.services.orders import update_order_status, update_reservation_status
+from app.services.product_search import invalidate_search_cache
 
 router = APIRouter()
 templates = Jinja2Templates(directory='app/templates')
@@ -35,34 +35,6 @@ def calc_stock_status(quantity: int) -> str:
     if quantity <= 5:
         return StockStatus.low.value
     return StockStatus.in_stock.value
-
-
-def _first_non_empty(row: dict[str, str | None], *keys: str) -> str:
-    for key in keys:
-        value = row.get(key)
-        if value is None:
-            continue
-        normalized = str(value).strip()
-        if normalized:
-            return normalized
-    return ''
-
-
-def _extract_pv(title: str) -> float | None:
-    match = re.search(r'\bpv\s*[:=]?\s*([0-9]+(?:[.,][0-9]+)?)\b', title.lower())
-    if not match:
-        return None
-    try:
-        return float(match.group(1).replace(',', '.'))
-    except ValueError:
-        return None
-
-
-def _clean_product_name(raw_name: str) -> str:
-    # Remove embedded "PV 1.5", "PV=1.5", "PV:1.5" fragments from product titles.
-    name = re.sub(r'\s*\bpv\s*[:=]?\s*[0-9]+(?:[.,][0-9]+)?\b\s*', ' ', raw_name, flags=re.IGNORECASE)
-    name = re.sub(r'\s{2,}', ' ', name)
-    return name.strip(' -–—')
 
 
 def display_status(status_value: str) -> str:
@@ -142,8 +114,8 @@ async def create_product(
     aliases: str = Form(''),
     description: str = Form(''),
 ):
-    extracted_pv = _extract_pv(name)
-    clean_name = _clean_product_name(name)
+    extracted_pv = extract_pv(name)
+    clean_name = clean_product_name(name)
     effective_pv = pv if pv not in (None, 0) else (extracted_pv if extracted_pv is not None else 0)
 
     async with SessionLocal() as session:
@@ -160,6 +132,7 @@ async def create_product(
             stock_status=calc_stock_status(quantity),
         ))
         await session.commit()
+    invalidate_search_cache()
     return RedirectResponse('/admin/products', status_code=303)
 
 
@@ -177,6 +150,7 @@ async def update_product(
         product.quantity = quantity
         product.stock_status = calc_stock_status(quantity)
         await session.commit()
+    invalidate_search_cache()
     return RedirectResponse('/admin/products', status_code=303)
 
 
@@ -191,6 +165,7 @@ async def delete_product(
         if product:
             await session.delete(product)
             await session.commit()
+    invalidate_search_cache()
     return RedirectResponse('/admin/products', status_code=303)
 
 
@@ -199,144 +174,18 @@ async def import_products_csv(
     request: Request,
     user: str = Depends(verify),
     csv_file: UploadFile = File(...),
+    mode: str = Form('upsert'),
 ):
     if not csv_file.filename or not csv_file.filename.endswith('.csv'):
         raise HTTPException(status_code=400, detail='Требуется CSV файл')
 
     content = await csv_file.read()
-    text = content.decode('utf-8-sig')
-
-    imported = 0
-    updated = 0
-    skipped = 0
-    errors = []
-
     async with SessionLocal() as session:
-        reader = csv.DictReader(io.StringIO(text), delimiter=';')
-        existing_products = (await session.execute(select(Product))).scalars().all()
-        existing_by_sku = {item.sku.strip().lower(): item for item in existing_products if item.sku}
-        existing_by_name = {item.name.strip().lower(): item for item in existing_products if item.name}
-
-        for idx, row in enumerate(reader, start=2):
-            try:
-                raw_name = _first_non_empty(row, 'name', 'Название', 'название', 'Title')
-                name = _clean_product_name(raw_name)
-                sku = _first_non_empty(row, 'sku', 'SKU', 'Артикул', 'артикул')
-                price_str = _first_non_empty(row, 'price_partner', 'Цена', 'цена', 'Price')
-                qty_str = _first_non_empty(row, 'quantity', 'Количество', 'количество', 'остаток', 'Quantity')
-                pv_str = _first_non_empty(row, 'pv', 'PV')
-                category = _first_non_empty(row, 'category', 'Категория', 'категория', 'Category')
-                aliases = _first_non_empty(row, 'aliases', 'Синонимы', 'синонимы')
-                description = _first_non_empty(row, 'description', 'Описание', 'описание', 'Description')
-
-                if not name:
-                    errors.append(f'Строка {idx}: пропущено название')
-                    continue
-
-                normalized_name = name.lower()
-                normalized_sku = sku.lower()
-
-                try:
-                    price_partner = float(price_str.replace(',', '.').replace(' ', '').replace('\u202f', ''))
-                except ValueError:
-                    errors.append(f'Строка {idx}: неверная цена "{price_str}"')
-                    continue
-
-                if qty_str:
-                    try:
-                        quantity = int(qty_str.replace(' ', '').replace('\u202f', ''))
-                    except ValueError:
-                        errors.append(f'Строка {idx}: неверное количество "{qty_str}"')
-                        continue
-                else:
-                    quantity = 0
-
-                try:
-                    extracted_from_title = _extract_pv(raw_name)
-                    pv = float(pv_str.replace(',', '.')) if pv_str else (extracted_from_title if extracted_from_title is not None else 0.0)
-                except ValueError:
-                    pv = 0.0
-
-                price_regular = round(price_partner * settings.partner_price_multiplier, 2)
-
-                existing_product = None
-                if normalized_sku:
-                    existing_product = existing_by_sku.get(normalized_sku)
-                if existing_product is None:
-                    existing_product = existing_by_name.get(normalized_name)
-
-                if existing_product is None:
-                    product = Product(
-                        name=name,
-                        sku=sku or None,
-                        price_partner=price_partner,
-                        price_regular=price_regular,
-                        quantity=quantity,
-                        pv=pv,
-                        category=category or None,
-                        aliases=aliases or None,
-                        description=description or None,
-                        stock_status=calc_stock_status(quantity),
-                    )
-                    session.add(product)
-                    imported += 1
-                    if normalized_sku:
-                        existing_by_sku[normalized_sku] = product
-                    existing_by_name[normalized_name] = product
-                else:
-                    changed = False
-
-                    if existing_product.name != name:
-                        existing_product.name = name
-                        changed = True
-                    if (existing_product.sku or '') != (sku or ''):
-                        existing_product.sku = sku or None
-                        changed = True
-                    if existing_product.price_partner != price_partner:
-                        existing_product.price_partner = price_partner
-                        changed = True
-                    if existing_product.price_regular != price_regular:
-                        existing_product.price_regular = price_regular
-                        changed = True
-                    if existing_product.quantity != quantity:
-                        existing_product.quantity = quantity
-                        changed = True
-                    if float(existing_product.pv or 0) != float(pv or 0):
-                        existing_product.pv = pv
-                        changed = True
-                    if (existing_product.category or '') != (category or ''):
-                        existing_product.category = category or None
-                        changed = True
-                    if (existing_product.aliases or '') != (aliases or ''):
-                        existing_product.aliases = aliases or None
-                        changed = True
-                    if (existing_product.description or '') != (description or ''):
-                        existing_product.description = description or None
-                        changed = True
-
-                    new_stock_status = calc_stock_status(quantity)
-                    if existing_product.stock_status != new_stock_status:
-                        existing_product.stock_status = new_stock_status
-                        changed = True
-
-                    if changed:
-                        updated += 1
-                    else:
-                        skipped += 1
-
-            except Exception as e:
-                errors.append(f'Строка {idx}: {str(e)}')
-
-        await session.commit()
-
-    error_msg = ''
-    if errors:
-        error_msg = f' Ошибки: {"; ".join(errors[:5])}' + ('...' if len(errors) > 5 else '')
-
-    return RedirectResponse(
-        f'/admin/products?message=Импортировано {imported} товаров. Обновлено {updated}. Пропущено без изменений: {skipped}.{error_msg}',
-        status_code=303,
-    )
+        result = await run_product_import(session, csv_content=content, filename=csv_file.filename, mode=mode)
+    if mode != 'preview':
+        invalidate_search_cache()
+    message = result.to_summary_message()
+    return RedirectResponse(f'/admin/products?message={quote_plus(message)}', status_code=303)
 
 
 @router.get('/faqs', response_class=HTMLResponse)
