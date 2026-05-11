@@ -1,4 +1,4 @@
-from sqlalchemy import select
+from sqlalchemy import select, text
 
 from app.config import get_settings
 from app.db.base import Base
@@ -81,6 +81,20 @@ FAQS = [
 async def init_db() -> None:
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+        if engine.dialect.name == 'postgresql':
+            await conn.execute(text('CREATE EXTENSION IF NOT EXISTS pg_trgm'))
+            await conn.execute(
+                text(
+                    'CREATE INDEX IF NOT EXISTS ix_products_name_trgm '
+                    'ON products USING gin (name gin_trgm_ops)'
+                )
+            )
+            await conn.execute(
+                text(
+                    'CREATE INDEX IF NOT EXISTS ix_products_sku_trgm '
+                    'ON products USING gin (sku gin_trgm_ops)'
+                )
+            )
 
     async with SessionLocal() as session:
         products_count = len((await session.execute(select(Product.id))).scalars().all())
