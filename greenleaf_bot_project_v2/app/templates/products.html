@@ -1,7 +1,17 @@
 {% extends 'base.html' %}
 {% block content %}
+{% if message %}
+<div class="alert alert-success">{{ message }}</div>
+{% endif %}
 <div class="grid">
   <div class="card">
+    <h2>Импорт CSV</h2>
+    <p class="note">Загрузите CSV файл с товарами. Формат: название;артикул;цена;количество;pv;категория;синонимы;описание</p>
+    <form method="post" action="/admin/products/import" enctype="multipart/form-data">
+      <input type="file" name="csv_file" accept=".csv" required>
+      <button type="submit">Загрузить CSV</button>
+    </form>
+    <hr style="margin: 20px 0; border-color: var(--border);">
     <h2>Добавить товар</h2>
     <p class="note">Заполните основные поля и нажмите "Сохранить". Товар сразу появится в списке справа.</p>
     <form method="post" action="/admin/products/create">
