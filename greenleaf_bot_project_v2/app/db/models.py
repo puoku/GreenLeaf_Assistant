@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime
 from enum import Enum
 
-from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Integer, String, Text
+from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Index, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .base import Base
@@ -33,6 +33,11 @@ class ReservationStatus(str, Enum):
 
 class Product(Base):
     __tablename__ = 'products'
+    __table_args__ = (
+        Index('ix_products_active_name', 'is_active', 'name'),
+        Index('ix_products_active_sku', 'is_active', 'sku'),
+        Index('ix_products_active_category', 'is_active', 'category'),
+    )
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     name: Mapped[str] = mapped_column(String(255), index=True)
@@ -126,3 +131,21 @@ class EventLog(Base):
     message: Mapped[str] = mapped_column(Text)
     payload: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+
+class ImportLog(Base):
+    __tablename__ = 'import_logs'
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    filename: Mapped[str] = mapped_column(String(255), default='unknown.csv')
+    mode: Mapped[str] = mapped_column(String(32), default='upsert', index=True)
+    status: Mapped[str] = mapped_column(String(32), default='ok', index=True)
+    added_count: Mapped[int] = mapped_column(Integer, default=0)
+    updated_count: Mapped[int] = mapped_column(Integer, default=0)
+    skipped_count: Mapped[int] = mapped_column(Integer, default=0)
+    error_count: Mapped[int] = mapped_column(Integer, default=0)
+    errors_preview: Mapped[str | None] = mapped_column(Text, nullable=True)
+    started_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    finished_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    duration_ms: Mapped[int] = mapped_column(Integer, default=0)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, index=True)
