@@ -5,7 +5,7 @@ import html
 from aiogram import F, Router
 from aiogram.enums import ChatType
 from aiogram.exceptions import TelegramBadRequest, TelegramForbiddenError
-from aiogram.filters import CommandStart
+from aiogram.filters import Command, CommandStart
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
 
@@ -51,6 +51,7 @@ ORDER_ACK = (
 
 ORDER_START_TRIGGERS = ['заказать', 'оформить заказ', 'хочу купить', 'сделать заказ', 'хочу заказ']
 RESERVATION_START_TRIGGERS = ['отложить', 'бронь', 'забронировать']
+CANCEL_TRIGGERS = ['отмена', 'отменить', 'не подходит', 'не хочу', 'не нужно', 'стоп', 'выход', 'назад']
 
 
 async def can_use_manager_actions(callback: CallbackQuery) -> bool:
@@ -85,6 +86,16 @@ async def start_handler(message: Message):
         'Здравствуйте! Я могу подсказать по наличию, цене, адресу, графику работы, а также принять заказ или бронь. '
         'Напишите вопрос обычным сообщением.'
     )
+
+
+@router.message(Command('cancel'))
+async def cancel_handler(message: Message, state: FSMContext):
+    current = await state.get_state()
+    await state.clear()
+    if current:
+        await message.answer('Хорошо, отменил активное действие. Чем ещё могу помочь?')
+    else:
+        await message.answer('Сейчас ничего не активно. Чем могу помочь?')
 
 
 @router.callback_query(F.data == 'need_manager')
@@ -243,6 +254,13 @@ async def auto_reservation_confirmation(message: Message, state: FSMContext):
 @router.message(ProductSelectionForm.waiting_choice)
 async def product_selection_choice(message: Message, state: FSMContext):
     text = (message.text or '').strip()
+    lowered = text.lower()
+
+    if any(word in lowered for word in CANCEL_TRIGGERS):
+        await state.clear()
+        await message.answer('Хорошо, отменил поиск товара. Чем ещё могу помочь?')
+        return
+
     data = await state.get_data()
     options = data.get('product_options', [])
     if not options:
@@ -259,7 +277,6 @@ async def product_selection_choice(message: Message, state: FSMContext):
             await message.answer(f'Введите номер от 1 до {len(options)}.')
             return
     else:
-        lowered = text.lower()
         for option in options:
             if lowered in option['name'].lower() or option['name'].lower() in lowered:
                 selected_product = await get_product_by_id(option['id'])
@@ -289,7 +306,14 @@ async def product_selection_choice(message: Message, state: FSMContext):
                     lines.append('\nНапишите номер варианта, точное название или нажмите кнопку ниже, чтобы подключить менеджера.')
                     await message.answer('\n'.join(lines), reply_markup=simple_manager_button())
                     return
-            await message.answer('Напишите номер варианта или более точное название товара.')
+
+            faq_item, _ = await find_faq_answer(text)
+            if faq_item:
+                await state.clear()
+                await message.answer(faq_item.answer_text, reply_markup=simple_manager_button())
+                return
+
+            await message.answer('Напишите номер варианта, точное название товара или "отмена", чтобы выйти из поиска.')
             return
 
     await state.clear()
