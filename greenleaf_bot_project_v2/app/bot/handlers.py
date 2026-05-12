@@ -45,9 +45,8 @@ router = Router()
 settings = get_settings()
 
 ORDER_ACK = (
-    'Спасибо за заказ! Корректируем данные со складом. '
-    f'В течение {settings.manager_response_minutes} минут '
-    '(если это в рабочее время СЦ) вам напишет наш сотрудник.'
+    'Спасибо за заказ! Ваша заявка зафиксирована. '
+    'Менеджер свяжется с вами в рабочее время (вт-суб 14:00–19:00).'
 )
 
 ORDER_START_TRIGGERS = ['заказать', 'оформить заказ', 'хочу купить', 'сделать заказ', 'хочу заказ']
@@ -92,7 +91,7 @@ async def start_handler(message: Message):
 async def need_manager(callback: CallbackQuery):
     if callback.message.chat.type == ChatType.PRIVATE:
         await set_customer_handoff(callback.from_user.id, True)
-    await callback.message.answer('Передаю диалог менеджеру. Он ответит вам в ближайшее время.')
+    await callback.message.answer('Ваша заявка зафиксирована. Менеджер свяжется с вами в рабочее время (вт-суб 14:00–19:00).')
     await callback.answer()
 
 
@@ -203,7 +202,7 @@ async def reservation_until(message: Message, state: FSMContext):
         bot=message.bot,
     )
     await state.clear()
-    await message.answer('Спасибо! Бронь передана сотруднику. После сверки по складу вам напишут отдельно.')
+    await message.answer('Спасибо! Бронь зафиксирована. Менеджер свяжется с вами в рабочее время (вт-суб 14:00–19:00).')
     await send_customer_review(message, render_customer_reservation_review(reservation), customer_reservation_review_actions(reservation.id))
 
 
@@ -373,8 +372,8 @@ async def client_order_actions(callback: CallbackQuery):
 
     await set_customer_handoff(callback.from_user.id, True)
     await callback.message.edit_reply_markup(reply_markup=None)
-    await callback.message.answer('Передаю заявку менеджеру. Он проверит её в админке и свяжется с вами.')
-    await callback.answer('Менеджер подключён')
+    await callback.message.answer('Ваша заявка зафиксирована. Менеджер свяжется с вами в рабочее время (вт-суб 14:00–19:00).')
+    await callback.answer('Менеджер уведомлён')
 
 
 @router.callback_query(F.data.startswith('client_reservation:'))
@@ -397,8 +396,8 @@ async def client_reservation_actions(callback: CallbackQuery):
 
     await set_customer_handoff(callback.from_user.id, True)
     await callback.message.edit_reply_markup(reply_markup=None)
-    await callback.message.answer('Передаю бронь менеджеру. Он проверит её в админке и свяжется с вами.')
-    await callback.answer('Менеджер подключён')
+    await callback.message.answer('Ваша заявка зафиксирована. Менеджер свяжется с вами в рабочее время (вт-суб 14:00–19:00).')
+    await callback.answer('Менеджер уведомлён')
 
 
 @router.message(F.text)
@@ -428,7 +427,7 @@ async def universal_text_handler(message: Message, state: FSMContext):
     if any(trigger in lowered for trigger in ['менеджер', 'оператор', 'живой человек', 'жалоба', 'не работает', 'хочу вернуть']):
         if not is_group_chat:
             await set_customer_handoff(message.from_user.id, True)
-        await message.answer('Передаю диалог менеджеру. Он ответит вам в ближайшее время.')
+        await message.answer('Ваша заявка зафиксирована. Менеджер свяжется с вами в рабочее время (вт-суб 14:00–19:00).')
         return
 
     direct_product = await find_direct_product_match(text)
@@ -538,7 +537,7 @@ async def universal_text_handler(message: Message, state: FSMContext):
         return
 
     if handoff_active:
-        await message.answer('Менеджер уже подключён к вашему диалогу. Если вопрос срочный, напишите подробнее или дождитесь ответа.')
+        await message.answer('Ваша заявка уже зафиксирована. Менеджер свяжется с вами в рабочее время (вт-суб 14:00–19:00).')
         return
 
     await message.answer('Не до конца понял запрос. Могу помочь с FAQ, поиском товара, заказом или бронью. Если нужно, позовите менеджера кнопкой ниже.', reply_markup=simple_manager_button())
