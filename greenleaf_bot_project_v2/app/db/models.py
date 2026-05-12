@@ -122,17 +122,6 @@ class Reservation(Base):
     customer: Mapped[Customer] = relationship(back_populates='reservations')
 
 
-class EventLog(Base):
-    __tablename__ = 'event_logs'
-
-    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
-    level: Mapped[str] = mapped_column(String(32), default='INFO')
-    event_type: Mapped[str] = mapped_column(String(64), index=True)
-    message: Mapped[str] = mapped_column(Text)
-    payload: Mapped[str | None] = mapped_column(Text, nullable=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
-
-
 class ImportLog(Base):
     __tablename__ = 'import_logs'
 
