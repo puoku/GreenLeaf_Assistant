@@ -10,6 +10,11 @@ class Settings(BaseSettings):
     database_url: str = 'sqlite+aiosqlite:///./greenleaf.db'
     openai_api_key: str | None = None
     openai_model: str = 'gpt-5-mini'
+    llm_timeout_seconds: float = 12.0
+    llm_retries: int = 2
+    llm_retry_base_delay_seconds: float = 0.7
+    llm_circuit_fail_threshold: int = 5
+    llm_circuit_open_seconds: int = 60
     admin_username: str = 'admin'
     admin_password: str = 'change-me'
     store_name: str = 'GreenLeaf Assistant'
