@@ -54,19 +54,6 @@ RESERVATION_START_TRIGGERS = ['отложить', 'бронь', 'заброни�
 CANCEL_TRIGGERS = ['отмена', 'отменить', 'не подходит', 'не хочу', 'не нужно', 'стоп', 'выход', 'назад']
 
 
-async def can_use_manager_actions(callback: CallbackQuery) -> bool:
-    manager_chat_id = settings.manager_chat_id
-    if not manager_chat_id or not callback.message:
-        return False
-    if callback.message.chat.id != manager_chat_id:
-        return False
-    if callback.message.chat.type == ChatType.PRIVATE:
-        return callback.from_user.id == manager_chat_id
-
-    member = await callback.bot.get_chat_member(manager_chat_id, callback.from_user.id)
-    return member.status in {'administrator', 'creator'}
-
-
 async def send_customer_review(message: Message, text: str, reply_markup) -> None:
     if message.chat.type == ChatType.PRIVATE:
         await message.answer(text, reply_markup=reply_markup)
@@ -165,8 +152,6 @@ async def order_comment(message: Message, state: FSMContext):
         address=data.get('address'),
         comment=None if message.text.lower() == 'нет' else message.text,
         source_chat_id=message.chat.id,
-        source_thread_id=message.message_thread_id,
-        bot=message.bot,
     )
     await state.clear()
     await message.answer(ORDER_ACK)
@@ -210,7 +195,6 @@ async def reservation_until(message: Message, state: FSMContext):
         customer_name=data.get('customer_name', ''),
         customer_phone=data.get('customer_phone', ''),
         source_chat_id=message.chat.id,
-        bot=message.bot,
     )
     await state.clear()
     await message.answer('Спасибо! Бронь зафиксирована. Менеджер свяжется с вами в рабочее время (вт-суб 14:00–19:00).')
@@ -237,7 +221,6 @@ async def auto_reservation_confirmation(message: Message, state: FSMContext):
         raw_text=data.get('pending_reservation_raw_text', ''),
         matches=data.get('pending_reservation_matches', []),
         source_chat_id=message.chat.id,
-        bot=message.bot,
     )
     await state.clear()
     if reservation:
@@ -321,59 +304,6 @@ async def product_selection_choice(message: Message, state: FSMContext):
         await message.answer('Не удалось найти выбранный товар. Попробуйте ещё раз.')
         return
     await message.answer(format_product_card(selected_product), reply_markup=product_actions(selected_product.id))
-
-
-@router.callback_query(F.data.startswith('order:'))
-async def order_actions(callback: CallbackQuery):
-    if not await can_use_manager_actions(callback):
-        await callback.answer('Эта кнопка доступна только менеджеру.', show_alert=True)
-        return
-    _, action, order_id_str = callback.data.split(':')
-    order_id = int(order_id_str)
-    mapping = {
-        'confirm': OrderStatus.confirmed.value,
-        'progress': OrderStatus.in_progress.value,
-        'cancel': OrderStatus.canceled.value,
-        'handoff': OrderStatus.in_progress.value,
-    }
-    order, customer = await update_order_status(order_id, mapping[action])
-    if not order or not customer:
-        await callback.answer('Заказ не найден', show_alert=True)
-        return
-
-    text_map = {
-        'confirm': f'Ваш заказ #{order.id} подтверждён менеджером.',
-        'progress': f'Ваш заказ #{order.id} взят в работу менеджером.',
-        'cancel': f'Ваш заказ #{order.id} отменён. Для уточнения деталей с вами свяжется менеджер.',
-        'handoff': 'Менеджер подключился к вашему заказу и ответит вам в ближайшее время.',
-    }
-    await callback.bot.send_message(customer.telegram_user_id, text_map[action])
-    if action == 'handoff' and (order.source_chat_id is None or order.source_chat_id > 0):
-        await set_customer_handoff(customer.telegram_user_id, True)
-    await callback.message.edit_reply_markup(reply_markup=None)
-    await callback.answer('Готово')
-
-
-@router.callback_query(F.data.startswith('reservation:'))
-async def reservation_actions(callback: CallbackQuery):
-    if not await can_use_manager_actions(callback):
-        await callback.answer('Эта кнопка доступна только менеджеру.', show_alert=True)
-        return
-    _, action, reservation_id_str = callback.data.split(':')
-    reservation_id = int(reservation_id_str)
-    status = ReservationStatus.confirmed.value if action == 'confirm' else ReservationStatus.canceled.value
-    reservation, customer = await update_reservation_status(reservation_id, status)
-    if not reservation or not customer:
-        await callback.answer('Бронь не найдена', show_alert=True)
-        return
-    text = (
-        f'Ваша бронь #{reservation.id} подтверждена. '
-        if action == 'confirm'
-        else f'Бронь #{reservation.id} отменена. Для уточнения деталей вам напишет менеджер.'
-    )
-    await callback.bot.send_message(customer.telegram_user_id, text)
-    await callback.message.edit_reply_markup(reply_markup=None)
-    await callback.answer('Готово')
 
 
 @router.callback_query(F.data.startswith('client_order:'))
@@ -496,7 +426,6 @@ async def universal_text_handler(message: Message, state: FSMContext):
                     for item in analysis.matches
                 ],
                 source_chat_id=message.chat.id,
-                bot=message.bot,
             )
             if reservation:
                 await message.answer('Ваша заявка принята!')

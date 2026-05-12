@@ -4,8 +4,6 @@ import re
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 
-from aiogram import Bot
-from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from sqlalchemy import select
 
 from app.config import get_settings
@@ -65,8 +63,6 @@ async def create_order(
     address: str | None,
     comment: str | None,
     source_chat_id: int | None,
-    source_thread_id: int | None,
-    bot: Bot,
 ) -> Order:
     customer = await get_or_create_customer(user_id, username, full_name)
     async with SessionLocal() as session:
@@ -77,7 +73,6 @@ async def create_order(
             address=address,
             comment=comment,
             source_chat_id=source_chat_id,
-            source_thread_id=source_thread_id,
             status=OrderStatus.new.value,
         )
         session.add(order)
@@ -96,7 +91,6 @@ async def create_reservation(
     customer_name: str,
     customer_phone: str,
     source_chat_id: int | None,
-    bot: Bot,
 ) -> Reservation:
     customer = await get_or_create_customer(user_id, username, full_name)
     customer.phone = customer_phone
@@ -195,7 +189,6 @@ async def create_reservation_from_text(
     username: str | None,
     full_name: str | None,
     raw_text: str,
-    bot: Bot,
 ) -> Reservation | None:
     analysis = await analyze_reservation_text(raw_text)
     if not analysis or not analysis.matches or analysis.missing_items:
@@ -208,7 +201,6 @@ async def create_reservation_from_text(
         raw_text=raw_text,
         matches=analysis.matches,
         source_chat_id=None,
-        bot=bot,
     )
 
 
@@ -252,7 +244,6 @@ async def create_reservation_from_matches(
     full_name: str | None,
     raw_text: str,
     matches: list[ReservationMatch] | list[dict],
-    bot: Bot,
     source_chat_id: int | None = None,
 ) -> Reservation | None:
     if not matches:

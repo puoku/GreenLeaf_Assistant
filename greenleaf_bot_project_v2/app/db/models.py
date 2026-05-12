@@ -91,14 +91,11 @@ class Order(Base):
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     customer_id: Mapped[int] = mapped_column(ForeignKey('customers.id'))
     source_chat_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
-    source_thread_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
     delivery_type: Mapped[str | None] = mapped_column(String(32), nullable=True)
     address: Mapped[str | None] = mapped_column(Text, nullable=True)
-    payment_method: Mapped[str | None] = mapped_column(String(64), nullable=True)
     comment: Mapped[str | None] = mapped_column(Text, nullable=True)
     items_text: Mapped[str] = mapped_column(Text)
     status: Mapped[str] = mapped_column(String(32), default=OrderStatus.new.value)
-    manager_message_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -115,7 +112,6 @@ class Reservation(Base):
     customer_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
     customer_phone: Mapped[str | None] = mapped_column(String(64), nullable=True)
     status: Mapped[str] = mapped_column(String(32), default=ReservationStatus.new.value)
-    manager_message_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
