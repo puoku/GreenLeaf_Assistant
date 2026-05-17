@@ -73,12 +73,15 @@ def _normalize_payload(data: dict) -> dict:
             if qty <= 0:
                 continue
             items.append({'name': str(name).strip(), 'quantity': qty})
+    reserve_until = data.get('reserve_until')
+    if isinstance(reserve_until, str) and reserve_until.strip().lower() in ('null', 'none', ''):
+        reserve_until = None
     return {
         'intent': data.get('intent', 'other'),
         'faq_intent': data.get('faq_intent'),
         'product_query': data.get('product_query'),
         'items': items,
-        'reserve_until': data.get('reserve_until'),
+        'reserve_until': reserve_until,
         'reply_hint': data.get('reply_hint', ''),
         'source': source,
     }
