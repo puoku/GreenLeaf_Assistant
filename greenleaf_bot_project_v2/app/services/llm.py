@@ -146,6 +146,7 @@ async def _call_llm(text: str) -> dict:
             base_url='https://openrouter.ai/api/v1',
             api_key=settings.openai_api_key,
             timeout=settings.llm_timeout_seconds,
+            max_retries=0,
         )
     response = await _client.chat.completions.create(
         model=settings.openai_model,
