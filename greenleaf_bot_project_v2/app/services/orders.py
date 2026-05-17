@@ -302,19 +302,21 @@ async def create_reservation_from_matches(
     async with SessionLocal() as session:
         fresh_customer = (await session.execute(select(Customer).where(Customer.id == customer.id))).scalar_one()
         validated_matches: list[ReservationMatch | dict] = []
+        items_lines: list[str] = []
         for item in matches:
             product_id = item.product_id if isinstance(item, ReservationMatch) else item['product_id']
             quantity = item.quantity if isinstance(item, ReservationMatch) else item['quantity']
             product = (await session.execute(select(Product).where(Product.id == product_id))).scalar_one_or_none()
             if product and product.quantity >= quantity:
                 validated_matches.append(item)
+                items_lines.append(f'{product.name} - {quantity} шт')
 
         if not validated_matches:
             return None
 
         reservation = Reservation(
             customer_id=customer.id,
-            items_text=raw_text.strip(),
+            items_text='\n'.join(items_lines),
             reserve_until=(reserve_until.strip() if reserve_until else 'до подтверждения менеджером'),
             customer_name=fresh_customer.full_name or fresh_customer.username or 'Не указано',
             customer_phone=fresh_customer.phone or 'Не указан',
