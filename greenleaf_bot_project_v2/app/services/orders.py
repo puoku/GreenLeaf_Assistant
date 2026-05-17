@@ -204,6 +204,14 @@ async def create_reservation_from_text(
     )
 
 
+async def _pick_available_product(session, candidates: list[Product], needed: int) -> Product | None:
+    for candidate in candidates:
+        fresh = (await session.execute(select(Product).where(Product.id == candidate.id))).scalar_one_or_none()
+        if fresh and fresh.quantity >= needed:
+            return fresh
+    return None
+
+
 async def analyze_reservation_text(raw_text: str) -> ReservationAnalysis | None:
     parsed_items = parse_reservation_items(raw_text)
     if not parsed_items:
@@ -213,13 +221,13 @@ async def analyze_reservation_text(raw_text: str) -> ReservationAnalysis | None:
     missing_items: list[str] = []
     async with SessionLocal() as session:
         for item in parsed_items:
-            result = await search_products(item.name, limit=1)
+            result = await search_products(item.name, limit=5)
             if not result.products:
                 missing_items.append(f'{item.name} - {item.quantity} шт')
                 continue
 
-            product = (await session.execute(select(Product).where(Product.id == result.products[0].id))).scalar_one_or_none()
-            if not product or product.quantity < item.quantity:
+            product = await _pick_available_product(session, result.products, item.quantity)
+            if not product:
                 missing_items.append(f'{item.name} - {item.quantity} шт')
                 continue
 
@@ -254,13 +262,13 @@ async def analyze_llm_items(items: list[dict]) -> ReservationAnalysis | None:
             if not name or quantity <= 0:
                 continue
 
-            result = await search_products(name, limit=1)
+            result = await search_products(name, limit=5)
             if not result.products:
                 missing_items.append(f'{name} - {quantity} шт')
                 continue
 
-            product = (await session.execute(select(Product).where(Product.id == result.products[0].id))).scalar_one_or_none()
-            if not product or product.quantity < quantity:
+            product = await _pick_available_product(session, result.products, quantity)
+            if not product:
                 missing_items.append(f'{name} - {quantity} шт')
                 continue
 
