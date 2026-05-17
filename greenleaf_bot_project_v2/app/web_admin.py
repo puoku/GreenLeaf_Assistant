@@ -363,3 +363,27 @@ async def update_reservation_from_admin(
         if text:
             await notify_customer(customer.telegram_user_id, text)
     return RedirectResponse('/admin/reservations', status_code=303)
+
+
+@router.get('/products/create')
+@router.get('/products/import')
+@router.get('/products/{product_id}/update')
+@router.get('/products/{product_id}/delete')
+async def _products_post_redirect(request: Request, user: str = Depends(verify)):
+    return RedirectResponse('/admin/products', status_code=303)
+
+
+@router.get('/faqs/create')
+@router.get('/faqs/{faq_id}/delete')
+async def _faqs_post_redirect(request: Request, user: str = Depends(verify)):
+    return RedirectResponse('/admin/faqs', status_code=303)
+
+
+@router.get('/orders/{order_id}/status')
+async def _orders_post_redirect(request: Request, user: str = Depends(verify)):
+    return RedirectResponse('/admin/orders', status_code=303)
+
+
+@router.get('/reservations/{reservation_id}/status')
+async def _reservations_post_redirect(request: Request, user: str = Depends(verify)):
+    return RedirectResponse('/admin/reservations', status_code=303)
