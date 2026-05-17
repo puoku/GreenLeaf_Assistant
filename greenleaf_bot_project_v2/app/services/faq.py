@@ -8,7 +8,9 @@ from app.db.session import SessionLocal
 
 
 async def find_faq_answer(text: str) -> tuple[FAQItem | None, int]:
-    text_norm = text.lower().replace('ё', 'е')
+    text_norm = text.lower().replace('ё', 'е').strip()
+    if len(text_norm) < 3:
+        return None, 0
     async with SessionLocal() as session:
         items = (await session.execute(select(FAQItem).where(FAQItem.is_active.is_(True)))).scalars().all()
 
