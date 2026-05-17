@@ -9,6 +9,7 @@ class Settings(BaseSettings):
     bot_username: str = 'GreenLeafBot'
     database_url: str = 'sqlite+aiosqlite:///./greenleaf.db'
     openai_api_key: str | None = None
+    openai_base_url: str = 'https://openrouter.ai/api/v1'
     openai_model: str = 'nvidia/nemotron-3-super-120b-a12b:free'
     llm_timeout_seconds: float = 12.0
     llm_retries: int = 2

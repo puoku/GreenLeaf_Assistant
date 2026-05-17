@@ -143,7 +143,7 @@ async def _call_llm(text: str) -> dict:
     global _client
     if _client is None:
         _client = AsyncOpenAI(
-            base_url='https://openrouter.ai/api/v1',
+            base_url=settings.openai_base_url,
             api_key=settings.openai_api_key,
             timeout=settings.llm_timeout_seconds,
             max_retries=0,
