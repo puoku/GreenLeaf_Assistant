@@ -55,6 +55,15 @@ RESERVATION_START_TRIGGERS = ['отложить', 'бронь', 'заброни�
 CANCEL_TRIGGERS = ['отмена', 'отменить', 'не подходит', 'не хочу', 'не нужно', 'стоп', 'выход', 'назад']
 
 
+async def try_handle_cancel(message: Message, state: FSMContext) -> bool:
+    text = (message.text or '').strip().lower().rstrip('.!?…')
+    if text in CANCEL_TRIGGERS:
+        await state.clear()
+        await message.answer('Хорошо, отменил. Чем ещё могу помочь?')
+        return True
+    return False
+
+
 async def send_customer_review(message: Message, text: str, reply_markup) -> None:
     if message.chat.type == ChatType.PRIVATE:
         await message.answer(text, reply_markup=reply_markup)
@@ -114,6 +123,8 @@ async def reserve_start(callback: CallbackQuery, state: FSMContext):
 
 @router.message(OrderForm.waiting_items)
 async def order_items(message: Message, state: FSMContext):
+    if await try_handle_cancel(message, state):
+        return
     lowered = (message.text or '').lower()
     if any(trigger in lowered for trigger in ORDER_START_TRIGGERS):
         await message.answer('Напишите именно список товаров и количество. Например: спрей 2 шт, гель алоэ 1 шт.')
@@ -125,6 +136,8 @@ async def order_items(message: Message, state: FSMContext):
 
 @router.message(OrderForm.waiting_delivery_type)
 async def order_delivery(message: Message, state: FSMContext):
+    if await try_handle_cancel(message, state):
+        return
     await state.update_data(delivery_type=message.text)
     if 'достав' in message.text.lower():
         await state.set_state(OrderForm.waiting_address)
@@ -136,6 +149,8 @@ async def order_delivery(message: Message, state: FSMContext):
 
 @router.message(OrderForm.waiting_address)
 async def order_address(message: Message, state: FSMContext):
+    if await try_handle_cancel(message, state):
+        return
     await state.update_data(address=message.text)
     await state.set_state(OrderForm.waiting_comment)
     await message.answer('Добавьте комментарий к заказу или напишите "нет".')
@@ -143,6 +158,8 @@ async def order_address(message: Message, state: FSMContext):
 
 @router.message(OrderForm.waiting_comment)
 async def order_comment(message: Message, state: FSMContext):
+    if await try_handle_cancel(message, state):
+        return
     data = await state.get_data()
     order = await create_order(
         user_id=message.from_user.id,
@@ -161,6 +178,8 @@ async def order_comment(message: Message, state: FSMContext):
 
 @router.message(ReservationForm.waiting_items)
 async def reservation_items(message: Message, state: FSMContext):
+    if await try_handle_cancel(message, state):
+        return
     lowered = (message.text or '').lower()
     if any(trigger in lowered for trigger in RESERVATION_START_TRIGGERS + ORDER_START_TRIGGERS):
         await message.answer('Напишите именно товары и количество для брони. Например: спрей 2 шт, гель 1 шт.')
@@ -172,6 +191,8 @@ async def reservation_items(message: Message, state: FSMContext):
 
 @router.message(ReservationForm.waiting_name)
 async def reservation_name(message: Message, state: FSMContext):
+    if await try_handle_cancel(message, state):
+        return
     await state.update_data(customer_name=message.text)
     await state.set_state(ReservationForm.waiting_phone)
     await message.answer('Напишите телефон для брони.')
@@ -179,6 +200,8 @@ async def reservation_name(message: Message, state: FSMContext):
 
 @router.message(ReservationForm.waiting_phone)
 async def reservation_phone(message: Message, state: FSMContext):
+    if await try_handle_cancel(message, state):
+        return
     await state.update_data(customer_phone=message.text)
     await state.set_state(ReservationForm.waiting_until)
     await message.answer('На какой срок поставить бронь? Например: до завтра 18:00. Если не важно, напишите "24 часа".')
@@ -186,6 +209,8 @@ async def reservation_phone(message: Message, state: FSMContext):
 
 @router.message(ReservationForm.waiting_until)
 async def reservation_until(message: Message, state: FSMContext):
+    if await try_handle_cancel(message, state):
+        return
     data = await state.get_data()
     reservation = await create_reservation(
         user_id=message.from_user.id,
@@ -204,6 +229,8 @@ async def reservation_until(message: Message, state: FSMContext):
 
 @router.message(AutoReservationForm.waiting_confirmation)
 async def auto_reservation_confirmation(message: Message, state: FSMContext):
+    if await try_handle_cancel(message, state):
+        return
     answer = (message.text or '').strip().lower()
     if answer not in {'да', 'нет', 'yes', 'no'}:
         await message.answer('Ответьте, пожалуйста: да или нет.')
