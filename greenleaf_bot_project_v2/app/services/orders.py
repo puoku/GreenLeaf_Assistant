@@ -238,6 +238,46 @@ async def analyze_reservation_text(raw_text: str) -> ReservationAnalysis | None:
     return ReservationAnalysis(matches=matches, missing_items=missing_items)
 
 
+async def analyze_llm_items(items: list[dict]) -> ReservationAnalysis | None:
+    if not items:
+        return None
+
+    matches: list[ReservationMatch] = []
+    missing_items: list[str] = []
+    async with SessionLocal() as session:
+        for entry in items:
+            name = (entry.get('name') or '').strip()
+            try:
+                quantity = int(entry.get('quantity', 0))
+            except (TypeError, ValueError):
+                continue
+            if not name or quantity <= 0:
+                continue
+
+            result = await search_products(name, limit=1)
+            if not result.products:
+                missing_items.append(f'{name} - {quantity} шт')
+                continue
+
+            product = (await session.execute(select(Product).where(Product.id == result.products[0].id))).scalar_one_or_none()
+            if not product or product.quantity < quantity:
+                missing_items.append(f'{name} - {quantity} шт')
+                continue
+
+            matches.append(
+                ReservationMatch(
+                    product_id=product.id,
+                    requested_name=name,
+                    product_name=product.name,
+                    quantity=quantity,
+                )
+            )
+
+    if not matches and not missing_items:
+        return None
+    return ReservationAnalysis(matches=matches, missing_items=missing_items)
+
+
 async def create_reservation_from_matches(
     user_id: int,
     username: str | None,
@@ -245,6 +285,7 @@ async def create_reservation_from_matches(
     raw_text: str,
     matches: list[ReservationMatch] | list[dict],
     source_chat_id: int | None = None,
+    reserve_until: str | None = None,
 ) -> Reservation | None:
     if not matches:
         return None
@@ -266,7 +307,7 @@ async def create_reservation_from_matches(
         reservation = Reservation(
             customer_id=customer.id,
             items_text=raw_text.strip(),
-            reserve_until='до подтверждения менеджером',
+            reserve_until=(reserve_until.strip() if reserve_until else 'до подтверждения менеджером'),
             customer_name=fresh_customer.full_name or fresh_customer.username or 'Не указано',
             customer_phone=fresh_customer.phone or 'Не указан',
             status=ReservationStatus.new.value,

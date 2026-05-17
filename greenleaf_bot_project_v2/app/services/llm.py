@@ -25,16 +25,24 @@ class _CircuitState:
 _circuit_state = _CircuitState()
 
 PROMPT = '''
-Ты классификатор запросов магазина. Верни только валидный JSON-объект.
+Ты классификатор и экстрактор данных для бота магазина. Верни только валидный JSON.
 Используй строго такую схему:
 {
   "intent": "faq | product_search | order | reservation | manager | other",
   "faq_intent": "address | schedule | delivery | payment | guarantee | returns | pickup | contacts | null",
   "product_query": "строка или null",
+  "items": [{"name": "название товара", "quantity": число}],
+  "reserve_until": "строка с указанием срока, например 'до среды', или null",
   "reply_hint": "короткая подсказка на русском до 12 слов"
 }
-Если пользователь прислал список товаров с количеством по строкам, это reservation, даже если в тексте есть слово "заказ".
-Никакого текста вне JSON. Никаких пояснений. Все ключи и строковые значения только в двойных кавычках.
+
+Правила:
+- Если пользователь упоминает товары с количеством (даже без слова "шт"), занеси их в items. "Пара" = 2, "тройка" = 3, "несколько" = 3.
+- Если товар назван без количества — quantity = 1.
+- Если упоминает срок брони ("до завтра", "до пятницы", "24 часа"), занеси в reserve_until ровно тот текст, что был в сообщении.
+- Если items извлечены — это intent=reservation, даже если в тексте есть "заказ" или "купить".
+- Если items пусто — оставь пустой массив [].
+- Никакого текста вне JSON. Все ключи и строковые значения только в двойных кавычках.
 '''
 
 
@@ -48,10 +56,29 @@ def _extract_json_object(raw: str) -> str | None:
 
 def _normalize_payload(data: dict) -> dict:
     source = data.get('source', 'llm')
+    raw_items = data.get('items') or []
+    items: list[dict] = []
+    if isinstance(raw_items, list):
+        for entry in raw_items:
+            if not isinstance(entry, dict):
+                continue
+            name = entry.get('name')
+            quantity = entry.get('quantity')
+            if not name or quantity is None:
+                continue
+            try:
+                qty = int(quantity)
+            except (TypeError, ValueError):
+                continue
+            if qty <= 0:
+                continue
+            items.append({'name': str(name).strip(), 'quantity': qty})
     return {
         'intent': data.get('intent', 'other'),
         'faq_intent': data.get('faq_intent'),
         'product_query': data.get('product_query'),
+        'items': items,
+        'reserve_until': data.get('reserve_until'),
         'reply_hint': data.get('reply_hint', ''),
         'source': source,
     }
@@ -59,6 +86,7 @@ def _normalize_payload(data: dict) -> dict:
 
 def _heuristic_classification(text: str) -> dict:
     lowered = (text or '').lower()
+    base = {'items': [], 'reserve_until': None, 'source': 'heuristic'}
     faq_map = {
         'address': ['где вы', 'адрес', 'где находитесь'],
         'schedule': ['график', 'когда работаете', 'часы работы', 'режим работы'],
@@ -71,57 +99,21 @@ def _heuristic_classification(text: str) -> dict:
     }
     for faq_intent, patterns in faq_map.items():
         if any(pattern in lowered for pattern in patterns):
-            return {
-                'intent': 'faq',
-                'faq_intent': faq_intent,
-                'product_query': None,
-                'reply_hint': 'Ответить по FAQ.',
-                'source': 'heuristic',
-            }
+            return {**base, 'intent': 'faq', 'faq_intent': faq_intent, 'product_query': None, 'reply_hint': 'Ответить по FAQ.'}
 
     if any(word in lowered for word in ['менеджер', 'оператор', 'человек']):
-        return {
-            'intent': 'manager',
-            'faq_intent': None,
-            'product_query': None,
-            'reply_hint': 'Передать диалог менеджеру.',
-            'source': 'heuristic',
-        }
+        return {**base, 'intent': 'manager', 'faq_intent': None, 'product_query': None, 'reply_hint': 'Передать диалог менеджеру.'}
 
     if re.search(r'\b\d+\s*(шт|штук|шт\.)\b', lowered):
-        return {
-            'intent': 'reservation',
-            'faq_intent': None,
-            'product_query': text.strip() or None,
-            'reply_hint': 'Уточнить и передать бронь менеджеру.',
-            'source': 'heuristic',
-        }
+        return {**base, 'intent': 'reservation', 'faq_intent': None, 'product_query': text.strip() or None, 'reply_hint': 'Уточнить и передать бронь менеджеру.'}
 
     if any(word in lowered for word in ['заказ', 'заказать', 'купить', 'оформить заказ']):
-        return {
-            'intent': 'order',
-            'faq_intent': None,
-            'product_query': None,
-            'reply_hint': 'Уточнить товар и количество.',
-            'source': 'heuristic',
-        }
+        return {**base, 'intent': 'order', 'faq_intent': None, 'product_query': None, 'reply_hint': 'Уточнить товар и количество.'}
 
     if any(word in lowered for word in ['есть', 'сколько стоит', 'цена', 'в наличии', 'товар']):
-        return {
-            'intent': 'product_search',
-            'faq_intent': None,
-            'product_query': text.strip() or None,
-            'reply_hint': 'Поискать товар в каталоге.',
-            'source': 'heuristic',
-        }
+        return {**base, 'intent': 'product_search', 'faq_intent': None, 'product_query': text.strip() or None, 'reply_hint': 'Поискать товар в каталоге.'}
 
-    return {
-        'intent': 'other',
-        'faq_intent': None,
-        'product_query': None,
-        'reply_hint': 'Уточнить запрос.',
-        'source': 'heuristic',
-    }
+    return {**base, 'intent': 'other', 'faq_intent': None, 'product_query': None, 'reply_hint': 'Уточнить запрос.'}
 
 
 def _is_circuit_open(now: float) -> bool:

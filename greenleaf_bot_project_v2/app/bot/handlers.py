@@ -21,6 +21,7 @@ from app.db.models import OrderStatus, ReservationStatus
 from app.services.faq import find_faq_answer, get_faq_by_intent
 from app.services.llm import classify_message
 from app.services.orders import (
+    analyze_llm_items,
     analyze_reservation_text,
     create_order,
     create_reservation,
@@ -221,6 +222,7 @@ async def auto_reservation_confirmation(message: Message, state: FSMContext):
         raw_text=data.get('pending_reservation_raw_text', ''),
         matches=data.get('pending_reservation_matches', []),
         source_chat_id=message.chat.id,
+        reserve_until=data.get('pending_reservation_reserve_until'),
     )
     await state.clear()
     if reservation:
@@ -373,10 +375,7 @@ async def universal_text_handler(message: Message, state: FSMContext):
         await message.answer('Напишите список товаров и количество. Например: паста YIBEILE — 2 шт, гель алоэ — 1 шт.')
         return
 
-    if any(k in lowered for k in RESERVATION_START_TRIGGERS):
-        await state.set_state(ReservationForm.waiting_items)
-        await message.answer('Напишите товары и количество, которые нужно поставить в бронь.')
-        return
+    wants_reservation = any(k in lowered for k in RESERVATION_START_TRIGGERS)
 
     if any(trigger in lowered for trigger in ['менеджер', 'оператор', 'живой человек', 'жалоба', 'не работает', 'хочу вернуть']):
         if not is_group_chat:
@@ -408,8 +407,12 @@ async def universal_text_handler(message: Message, state: FSMContext):
         await message.answer('Напишите список товаров и количество. Например: паста YIBEILE — 2 шт, гель алоэ — 1 шт.')
         return
 
-    if reservation_by_format or (ai_result and ai_result.get('intent') == 'reservation'):
+    if wants_reservation or reservation_by_format or (ai_result and ai_result.get('intent') == 'reservation'):
+        reserve_until = ai_result.get('reserve_until') if ai_result else None
         analysis = await analyze_reservation_text(text)
+        if (not analysis or (not analysis.matches and not analysis.missing_items)) and ai_result and ai_result.get('items'):
+            analysis = await analyze_llm_items(ai_result['items'])
+
         if analysis and analysis.matches and not analysis.missing_items:
             reservation = await create_reservation_from_matches(
                 user_id=message.from_user.id,
@@ -426,6 +429,7 @@ async def universal_text_handler(message: Message, state: FSMContext):
                     for item in analysis.matches
                 ],
                 source_chat_id=message.chat.id,
+                reserve_until=reserve_until,
             )
             if reservation:
                 await message.answer('Ваша заявка принята!')
@@ -448,6 +452,7 @@ async def universal_text_handler(message: Message, state: FSMContext):
                     }
                     for item in analysis.matches
                 ],
+                pending_reservation_reserve_until=reserve_until,
             )
             missing_lines = '\n'.join(f'- {item}' for item in analysis.missing_items)
             await message.answer(
@@ -466,6 +471,11 @@ async def universal_text_handler(message: Message, state: FSMContext):
             )
             if not is_group_chat:
                 await set_customer_handoff(message.from_user.id, True)
+            return
+
+        if wants_reservation:
+            await state.set_state(ReservationForm.waiting_items)
+            await message.answer('Напишите товары и количество, которые нужно поставить в бронь. Пример: спрей — 2 шт.')
             return
 
     if looks_like_product_question(text) or (ai_result and ai_result.get('intent') == 'product_search'):
