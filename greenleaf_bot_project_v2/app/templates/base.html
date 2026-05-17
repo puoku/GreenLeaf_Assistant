@@ -5,54 +5,187 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{{ title or 'GreenLeaf Admin' }}</title>
   <style>
-    body { font-family: Arial, sans-serif; margin: 0; background:#f4f6f8; color:#111; }
-    header { background:#111827; color:white; padding:16px 24px; }
-    nav a { color:white; margin-right:16px; text-decoration:none; }
-    main { padding:24px; }
-    .card { background:white; border-radius:12px; padding:16px; margin-bottom:16px; box-shadow:0 1px 4px rgba(0,0,0,.08); }
-    table { width:100%; border-collapse:collapse; background:white; border-radius:12px; overflow:hidden; }
-    th, td { padding:10px; border-bottom:1px solid #e5e7eb; text-align:left; vertical-align:top; }
-    input, textarea { width:100%; padding:10px; margin:6px 0 12px; border:1px solid #d1d5db; border-radius:8px; }
-    button { padding:10px 14px; border:0; border-radius:8px; background:#2563eb; color:white; cursor:pointer; }
-    .grid { display:grid; grid-template-columns:0.75fr 1.25fr; gap:16px; }
-    @media (max-width: 1100px) { .grid { grid-template-columns:1fr; } }
-    .muted { color:#6b7280; }
-    .stack-sm > * { margin-bottom:8px; }
-    .stack-sm > *:last-child { margin-bottom:0; }
-    .inline-form { display:flex; gap:8px; align-items:center; }
-    .inline-form input { margin:0; }
-    .danger { background:#dc2626; }
-    .note { font-size:14px; color:#6b7280; margin-top:-6px; margin-bottom:12px; }
-    .product-meta { font-size:14px; color:#374151; line-height:1.5; }
-    .product-name { font-weight:700; margin-bottom:4px; }
-    .badge { display:inline-block; padding:4px 8px; border-radius:999px; font-size:12px; background:#e5e7eb; color:#111827; }
-    .status-badge { display:inline-block; padding:4px 10px; border-radius:999px; font-size:12px; font-weight:700; letter-spacing:.02em; }
-    .status-ok { background:#dcfce7; color:#166534; }
-    .status-bad { background:#fee2e2; color:#991b1b; }
-    .status-neutral { background:#e5e7eb; color:#374151; }
-    .action-stack { display:flex; flex-direction:column; gap:8px; min-width:180px; }
-    .action-stack form { margin:0; }
-    .action-stack button { width:100%; }
-    .button-secondary { background:#475569; }
-    .button-success { background:#16a34a; }
-    .button-danger { background:#dc2626; }
-    .small-note { font-size:13px; color:#6b7280; }
-    .alert { padding:12px 16px; border-radius:8px; margin-bottom:16px; }
-    .alert-success { background:#dcfce7; color:#166534; border:1px solid #86efac; }
-    .alert-error { background:#fee2e2; color:#991b1b; border:1px solid #fca5a5; }
-    input[type="file"] { padding:8px; border:1px dashed #d1d5db; background:#f9fafb; }
-    hr { border:0; border-top:1px solid #e5e7eb; margin:20px 0; }
+    :root {
+      --primary: #4f46e5;
+      --primary-hover: #4338ca;
+      --bg: #f5f6fa;
+      --card: #ffffff;
+      --border: #e5e7eb;
+      --text: #1f2937;
+      --text-muted: #6b7280;
+      --success: #16a34a;
+      --success-bg: #dcfce7;
+      --success-text: #166534;
+      --danger: #dc2626;
+      --danger-bg: #fee2e2;
+      --danger-text: #991b1b;
+      --neutral-bg: #f3f4f6;
+      --neutral-text: #374151;
+    }
+    * { box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-size: 14px;
+      line-height: 1.5;
+    }
+    header {
+      background: linear-gradient(135deg, #111827 0%, #1f2937 100%);
+      color: white;
+      padding: 18px 28px;
+      box-shadow: 0 2px 8px rgba(0,0,0,.06);
+    }
+    header .brand {
+      display: block;
+      font-size: 18px;
+      font-weight: 700;
+      letter-spacing: .3px;
+      margin-bottom: 10px;
+    }
+    nav { display: flex; gap: 4px; flex-wrap: wrap; }
+    nav a {
+      color: rgba(255,255,255,.75);
+      text-decoration: none;
+      padding: 8px 14px;
+      border-radius: 8px;
+      font-weight: 500;
+      font-size: 14px;
+      transition: background .15s, color .15s;
+    }
+    nav a:hover { background: rgba(255,255,255,.1); color: white; }
+    nav a.active { background: rgba(255,255,255,.2); color: white; }
+    main { padding: 24px; max-width: 1400px; margin: 0 auto; }
+    h1, h2, h3 { margin-top: 0; font-weight: 700; }
+    h2 { font-size: 20px; margin-bottom: 12px; }
+    h3 { font-size: 16px; margin-bottom: 10px; }
+    .card {
+      background: var(--card);
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 16px;
+      box-shadow: 0 1px 3px rgba(0,0,0,.05), 0 1px 2px rgba(0,0,0,.04);
+      border: 1px solid var(--border);
+    }
+    table { width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden; }
+    th {
+      text-align: left;
+      padding: 12px;
+      font-weight: 600;
+      font-size: 11px;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      letter-spacing: .5px;
+      background: #fafbfc;
+      border-bottom: 1px solid var(--border);
+    }
+    td { padding: 14px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
+    tr:last-child td { border-bottom: none; }
+    tbody tr:hover td { background: #fafbfc; }
+    input, textarea, select {
+      width: 100%;
+      padding: 10px 12px;
+      margin: 4px 0 12px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-size: 14px;
+      font-family: inherit;
+      transition: border-color .15s, box-shadow .15s;
+      background: white;
+    }
+    input:focus, textarea:focus, select:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(79,70,229,.12);
+    }
+    label {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text);
+      margin: 12px 0 0;
+    }
+    button, .btn {
+      display: inline-block;
+      padding: 10px 18px;
+      border: 0;
+      border-radius: 8px;
+      background: var(--primary);
+      color: white;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 600;
+      font-family: inherit;
+      text-decoration: none;
+      text-align: center;
+      transition: background .15s, transform .05s;
+    }
+    button:hover, .btn:hover { background: var(--primary-hover); }
+    button:active, .btn:active { transform: scale(.98); }
+    .button-secondary, .btn-secondary { background: #6b7280; }
+    .button-secondary:hover, .btn-secondary:hover { background: #4b5563; }
+    .button-success { background: var(--success); }
+    .button-success:hover { background: #15803d; }
+    .button-danger, .danger { background: var(--danger); }
+    .button-danger:hover, .danger:hover { background: #b91c1c; }
+    .grid { display: grid; grid-template-columns: 0.75fr 1.25fr; gap: 20px; }
+    @media (max-width: 1100px) { .grid { grid-template-columns: 1fr; } }
+    .muted { color: var(--text-muted); }
+    .stack-sm > * { margin-bottom: 8px; }
+    .stack-sm > *:last-child { margin-bottom: 0; }
+    .inline-form { display: flex; gap: 8px; align-items: center; }
+    .inline-form input { margin: 0; }
+    .note { font-size: 13px; color: var(--text-muted); margin: -4px 0 16px; }
+    .product-meta { font-size: 13px; color: var(--text-muted); line-height: 1.6; }
+    .product-name { font-weight: 700; margin-bottom: 6px; color: var(--text); }
+    .badge {
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 600;
+      background: var(--neutral-bg);
+      color: var(--neutral-text);
+      text-transform: uppercase;
+      letter-spacing: .3px;
+    }
+    .status-badge {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: .3px;
+      text-transform: uppercase;
+    }
+    .status-ok { background: var(--success-bg); color: var(--success-text); }
+    .status-bad { background: var(--danger-bg); color: var(--danger-text); }
+    .status-neutral { background: var(--neutral-bg); color: var(--neutral-text); }
+    .action-stack { display: flex; flex-direction: column; gap: 8px; min-width: 180px; }
+    .action-stack form { margin: 0; }
+    .action-stack button, .action-stack .btn { width: 100%; }
+    .small-note { font-size: 13px; color: var(--text-muted); }
+    .alert { padding: 12px 16px; border-radius: 8px; margin-bottom: 16px; font-size: 14px; }
+    .alert-success { background: var(--success-bg); color: var(--success-text); border: 1px solid #86efac; }
+    .alert-error { background: var(--danger-bg); color: var(--danger-text); border: 1px solid #fca5a5; }
+    input[type="file"] { padding: 10px; border: 1px dashed var(--border); background: #f9fafb; font-size: 13px; }
+    hr { border: 0; border-top: 1px solid var(--border); margin: 20px 0; }
+    .toolbar { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
+    .toolbar h2 { margin: 0; }
+    .button-row { display: flex; gap: 8px; flex-wrap: wrap; }
   </style>
 </head>
 <body>
+{% set path = request.url.path %}
 <header>
-  <strong>GreenLeaf Admin</strong>
-  <nav style="margin-top:8px;">
-    <a href="/admin/">Главная</a>
-    <a href="/admin/products">Товары</a>
-    <a href="/admin/faqs">FAQ</a>
-    <a href="/admin/orders">Заказы</a>
-    <a href="/admin/reservations">Брони</a>
+  <span class="brand">🌿 GreenLeaf Admin</span>
+  <nav>
+    <a href="/admin/" class="{% if path == '/admin/' or path == '/admin' %}active{% endif %}">Главная</a>
+    <a href="/admin/products" class="{% if '/admin/products' in path %}active{% endif %}">Товары</a>
+    <a href="/admin/faqs" class="{% if '/admin/faqs' in path %}active{% endif %}">FAQ</a>
+    <a href="/admin/orders" class="{% if '/admin/orders' in path %}active{% endif %}">Заказы</a>
+    <a href="/admin/reservations" class="{% if '/admin/reservations' in path %}active{% endif %}">Брони</a>
   </nav>
 </header>
 <main>{% block content %}{% endblock %}</main>

@@ -154,6 +154,48 @@ async def update_product(
     return RedirectResponse('/admin/products', status_code=303)
 
 
+@router.get('/products/{product_id}/edit', response_class=HTMLResponse)
+async def product_edit_page(product_id: int, request: Request, user: str = Depends(verify)):
+    async with SessionLocal() as session:
+        product = (await session.execute(select(Product).where(Product.id == product_id))).scalar_one_or_none()
+        if not product:
+            raise HTTPException(status_code=404, detail='Product not found')
+    return templates.TemplateResponse('product_edit.html', {'request': request, 'product': product, 'user': user})
+
+
+@router.post('/products/{product_id}/edit')
+async def product_edit_submit(
+    product_id: int,
+    request: Request,
+    user: str = Depends(verify),
+    name: str = Form(...),
+    sku: str = Form(''),
+    price_partner: float = Form(...),
+    quantity: int = Form(...),
+    pv: float = Form(0),
+    category: str = Form(''),
+    aliases: str = Form(''),
+    description: str = Form(''),
+):
+    async with SessionLocal() as session:
+        product = (await session.execute(select(Product).where(Product.id == product_id))).scalar_one_or_none()
+        if not product:
+            raise HTTPException(status_code=404, detail='Product not found')
+        product.name = name.strip()
+        product.sku = sku.strip() or None
+        product.price_partner = price_partner
+        product.price_regular = round(price_partner * settings.partner_price_multiplier, 2)
+        product.quantity = quantity
+        product.pv = pv
+        product.category = category.strip() or None
+        product.aliases = aliases.strip() or None
+        product.description = description.strip() or None
+        product.stock_status = calc_stock_status(quantity)
+        await session.commit()
+    invalidate_search_cache()
+    return RedirectResponse('/admin/products', status_code=303)
+
+
 @router.post('/products/{product_id}/delete')
 async def delete_product(
     product_id: int,
@@ -206,6 +248,45 @@ async def create_faq(
     async with SessionLocal() as session:
         session.add(FAQItem(intent=intent, question_patterns=question_patterns, answer_text=answer_text))
         await session.commit()
+    return RedirectResponse('/admin/faqs', status_code=303)
+
+
+@router.get('/faqs/{faq_id}/edit', response_class=HTMLResponse)
+async def faq_edit_page(faq_id: int, request: Request, user: str = Depends(verify)):
+    async with SessionLocal() as session:
+        faq = (await session.execute(select(FAQItem).where(FAQItem.id == faq_id))).scalar_one_or_none()
+        if not faq:
+            raise HTTPException(status_code=404, detail='FAQ not found')
+    return templates.TemplateResponse('faq_edit.html', {'request': request, 'faq': faq, 'user': user})
+
+
+@router.post('/faqs/{faq_id}/edit')
+async def faq_edit_submit(
+    faq_id: int,
+    request: Request,
+    user: str = Depends(verify),
+    intent: str = Form(...),
+    question_patterns: str = Form(...),
+    answer_text: str = Form(...),
+):
+    async with SessionLocal() as session:
+        faq = (await session.execute(select(FAQItem).where(FAQItem.id == faq_id))).scalar_one_or_none()
+        if not faq:
+            raise HTTPException(status_code=404, detail='FAQ not found')
+        faq.intent = intent.strip()
+        faq.question_patterns = question_patterns.strip()
+        faq.answer_text = answer_text.strip()
+        await session.commit()
+    return RedirectResponse('/admin/faqs', status_code=303)
+
+
+@router.post('/faqs/{faq_id}/delete')
+async def faq_delete(faq_id: int, request: Request, user: str = Depends(verify)):
+    async with SessionLocal() as session:
+        faq = (await session.execute(select(FAQItem).where(FAQItem.id == faq_id))).scalar_one_or_none()
+        if faq:
+            await session.delete(faq)
+            await session.commit()
     return RedirectResponse('/admin/faqs', status_code=303)
 
 

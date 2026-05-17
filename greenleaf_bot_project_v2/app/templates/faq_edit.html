@@ -1,0 +1,26 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="card">
+  <div class="toolbar">
+    <h2>Редактирование FAQ #{{ faq.id }}</h2>
+    <a href="/admin/faqs" class="btn btn-secondary">← Назад к списку</a>
+  </div>
+  <p class="note">Бот будет искать в этих фразах совпадения с запросом клиента и отвечать заданным текстом.</p>
+  <form method="post" action="/admin/faqs/{{ faq.id }}/edit">
+    <label>Intent (внутренний ключ)</label>
+    <input name="intent" value="{{ faq.intent }}" required>
+    <p class="note">Например: <code>address</code>, <code>schedule</code>, <code>delivery</code>. Латиницей, без пробелов.</p>
+
+    <label>Фразы, по которым срабатывает (через ;)</label>
+    <textarea name="question_patterns" rows="3" required>{{ faq.question_patterns }}</textarea>
+
+    <label>Ответ бота</label>
+    <textarea name="answer_text" rows="5" required>{{ faq.answer_text }}</textarea>
+
+    <div class="button-row" style="margin-top: 16px;">
+      <button type="submit">Сохранить</button>
+      <a href="/admin/faqs" class="btn btn-secondary">Отмена</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

@@ -1,0 +1,51 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="card">
+  <div class="toolbar">
+    <h2>Редактирование товара #{{ product.id }}</h2>
+    <a href="/admin/products" class="btn btn-secondary">← Назад к списку</a>
+  </div>
+  <p class="note">Изменения применятся ко всем сценариям бота сразу — поиск, бронь, заказы.</p>
+  <form method="post" action="/admin/products/{{ product.id }}/edit">
+    <label>Название</label>
+    <input name="name" value="{{ product.name }}" required>
+
+    <label>Артикул (SKU)</label>
+    <input name="sku" value="{{ product.sku or '' }}">
+
+    <div class="grid">
+      <div>
+        <label>Партнёрская цена, ₽</label>
+        <input name="price_partner" type="number" step="0.01" value="{{ product.price_partner }}" required>
+      </div>
+      <div>
+        <label>Количество на складе</label>
+        <input name="quantity" type="number" value="{{ product.quantity }}" required>
+      </div>
+    </div>
+
+    <div class="grid">
+      <div>
+        <label>PV (баллы)</label>
+        <input name="pv" type="number" step="0.1" value="{{ product.pv }}">
+      </div>
+      <div>
+        <label>Категория</label>
+        <input name="category" value="{{ product.category or '' }}">
+      </div>
+    </div>
+
+    <label>Синонимы (через запятую)</label>
+    <input name="aliases" value="{{ product.aliases or '' }}" placeholder="например: репеллент, антимоскит, средство от комаров">
+    <p class="note">Синонимы помогают боту находить товар по альтернативным запросам клиентов.</p>
+
+    <label>Описание</label>
+    <textarea name="description" rows="4">{{ product.description or '' }}</textarea>
+
+    <div class="button-row" style="margin-top: 16px;">
+      <button type="submit">Сохранить</button>
+      <a href="/admin/products" class="btn btn-secondary">Отмена</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

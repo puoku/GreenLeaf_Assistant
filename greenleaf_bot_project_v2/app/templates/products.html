@@ -59,15 +59,15 @@
         <td>
           <div class="stack-sm">
             <form method="post" action="/admin/products/{{ item.id }}/update">
-              <div class="product-meta">Изменить остаток:</div>
+              <div class="product-meta">Быстро изменить остаток:</div>
               <div class="inline-form">
                 <input name="quantity" type="number" value="{{ item.quantity }}" required>
-                <button type="submit">Сохранить</button>
+                <button type="submit">OK</button>
               </div>
             </form>
+            <a href="/admin/products/{{ item.id }}/edit" class="btn" style="width:100%; margin-top: 4px;">✏️ Редактировать</a>
             <form method="post" action="/admin/products/{{ item.id }}/delete" onsubmit="return confirm('Удалить товар?');">
-              <div class="product-meta">Удалить товар:</div>
-              <button type="submit" class="danger">Удалить</button>
+              <button type="submit" class="danger" style="width:100%;">🗑 Удалить</button>
             </form>
           </div>
         </td>
