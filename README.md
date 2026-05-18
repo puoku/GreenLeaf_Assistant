@@ -1,5 +1,7 @@
 # GreenLeaf Assistant
 
+![tests](https://github.com/puoku/GreenLeaf_Assistant/actions/workflows/test.yml/badge.svg)
+
 Telegram-бот для розничного магазина в Новосибирске. Принимает заказы и брони, отвечает на типовые вопросы и хранит каталог товаров с возможностью править его через веб-админку.
 
 Код в папке `greenleaf_bot_project_v2`.
