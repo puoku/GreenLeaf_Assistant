@@ -9,3 +9,5 @@ greenleaf_bot_project_v2/.venv/
 greenleaf_bot_project_v2/app/.venv/
 greenleaf_bot_project_v2/**/__pycache__/
 greenleaf_bot_project_v2/**/*.pyc
+greenleaf_bot_project_v2/.pytest_cache/
+.pytest_cache/

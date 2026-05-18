@@ -14,3 +14,4 @@ passlib[bcrypt]==1.7.4
 itsdangerous==2.2.0
 httpx==0.28.1
 greenlet
+pytest==8.3.3
