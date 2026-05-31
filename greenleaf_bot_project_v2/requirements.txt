@@ -10,8 +10,6 @@ openai==1.68.2
 rapidfuzz==3.14.1
 pydantic==2.11.1
 pydantic-settings==2.8.1
-passlib[bcrypt]==1.7.4
-itsdangerous==2.2.0
 httpx==0.28.1
 greenlet
 pytest==8.3.3
