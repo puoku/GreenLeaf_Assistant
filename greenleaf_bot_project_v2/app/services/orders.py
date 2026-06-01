@@ -184,26 +184,6 @@ async def reserve_order_products(session, raw_text: str) -> list[str]:
     return await reserve_products_for_text(session, raw_text)
 
 
-async def create_reservation_from_text(
-    user_id: int,
-    username: str | None,
-    full_name: str | None,
-    raw_text: str,
-) -> Reservation | None:
-    analysis = await analyze_reservation_text(raw_text)
-    if not analysis or not analysis.matches or analysis.missing_items:
-        return None
-
-    return await create_reservation_from_matches(
-        user_id=user_id,
-        username=username,
-        full_name=full_name,
-        raw_text=raw_text,
-        matches=analysis.matches,
-        source_chat_id=None,
-    )
-
-
 async def _pick_available_product(session, candidates: list[Product], needed: int) -> Product | None:
     for candidate in candidates:
         fresh = (await session.execute(select(Product).where(Product.id == candidate.id))).scalar_one_or_none()
@@ -331,11 +311,6 @@ async def create_reservation_from_matches(
         return reservation
 
 
-async def get_order(order_id: int) -> Order | None:
-    async with SessionLocal() as session:
-        return (await session.execute(select(Order).where(Order.id == order_id))).scalar_one_or_none()
-
-
 async def update_order_status(order_id: int, status: str) -> tuple[Order | None, Customer | None]:
     async with SessionLocal() as session:
         order = (await session.execute(select(Order).where(Order.id == order_id))).scalar_one_or_none()
@@ -398,31 +373,6 @@ async def is_customer_in_handoff(telegram_user_id: int) -> bool:
             await session.commit()
             return False
         return True
-
-
-def render_order(order_id: int, customer: Customer, order: Order) -> str:
-    return (
-        f'<b>Новый заказ #{order_id}</b>\n'
-        f'Клиент: {customer.full_name or "—"} (@{customer.username or "—"})\n'
-        f'Telegram ID: <code>{customer.telegram_user_id}</code>\n'
-        f'Товары: {order.items_text}\n'
-        f'Получение: {order.delivery_type or "не указано"}\n'
-        f'Адрес: {order.address or "—"}\n'
-        f'Комментарий: {order.comment or "—"}\n'
-        f'Статус: {order.status}'
-    )
-
-
-def render_reservation(reservation_id: int, customer: Customer, reservation: Reservation) -> str:
-    return (
-        f'<b>Новая бронь #{reservation_id}</b>\n'
-        f'Клиент: {reservation.customer_name}\n'
-        f'Телефон: {reservation.customer_phone}\n'
-        f'Telegram: @{customer.username or "—"} / <code>{customer.telegram_user_id}</code>\n'
-        f'Товары: {reservation.items_text}\n'
-        f'Срок брони: {reservation.reserve_until or "24 часа"}\n'
-        f'Статус: {reservation.status}'
-    )
 
 
 def render_customer_order_review(order: Order) -> str:
