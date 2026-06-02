@@ -28,6 +28,7 @@ from app.services.orders import (
     create_reservation_from_matches,
     is_customer_in_handoff,
     looks_like_reservation_text,
+    parse_reservation_items,
     render_customer_order_review,
     render_customer_reservation_review,
     set_customer_handoff,
@@ -126,7 +127,9 @@ async def order_items(message: Message, state: FSMContext):
     if await try_handle_cancel(message, state):
         return
     lowered = (message.text or '').lower()
-    if any(trigger in lowered for trigger in ORDER_START_TRIGGERS):
+    has_trigger = any(trigger in lowered for trigger in ORDER_START_TRIGGERS)
+    has_items = bool(parse_reservation_items(message.text or ''))
+    if has_trigger and not has_items:
         await message.answer('Напишите именно список товаров и количество. Например: спрей 2 шт, гель алоэ 1 шт.')
         return
     await state.update_data(items_text=message.text)
@@ -181,7 +184,9 @@ async def reservation_items(message: Message, state: FSMContext):
     if await try_handle_cancel(message, state):
         return
     lowered = (message.text or '').lower()
-    if any(trigger in lowered for trigger in RESERVATION_START_TRIGGERS + ORDER_START_TRIGGERS):
+    has_trigger = any(trigger in lowered for trigger in RESERVATION_START_TRIGGERS + ORDER_START_TRIGGERS)
+    has_items = bool(parse_reservation_items(message.text or ''))
+    if has_trigger and not has_items:
         await message.answer('Напишите именно товары и количество для брони. Например: спрей 2 шт, гель 1 шт.')
         return
     await state.update_data(items_text=message.text)
